@@ -1,0 +1,10 @@
+- op: replace
+  path: /spec/realm/clients/0/rootUrl
+  value: https://server-trusted-profile-analyzer.__INGRESS_DOMAIN__
+- op: replace
+  path: /spec/realm/clients/0/redirectUris
+  value:
+    - https://server-trusted-profile-analyzer.__INGRESS_DOMAIN__
+    - https://server-trusted-profile-analyzer.__INGRESS_DOMAIN__/
+    - https://server-trusted-profile-analyzer.__INGRESS_DOMAIN__/*
+    - http://localhost:8080/*

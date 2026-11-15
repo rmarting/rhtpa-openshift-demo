@@ -1,0 +1,12 @@
+# Standard OpenShift cluster. Patch files contain __INGRESS_DOMAIN__.
+# ./deploy/deploy.sh ocp reads the cluster ingress domain and substitutes it
+# before apply. oc delete -k ocp removes the same objects; resource names do
+# not include the domain.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base/00-operators
+  - ../base/10-database
+  - 20-keycloak
+  - 30-realm
+  - 40-rhtpa

@@ -1,0 +1,10 @@
+- op: replace
+  path: /spec/realm/clients/0/rootUrl
+  value: https://server-trusted-profile-analyzer.apps-crc.testing
+- op: replace
+  path: /spec/realm/clients/0/redirectUris
+  value:
+    - https://server-trusted-profile-analyzer.apps-crc.testing
+    - https://server-trusted-profile-analyzer.apps-crc.testing/
+    - https://server-trusted-profile-analyzer.apps-crc.testing/*
+    - http://localhost:8080/*

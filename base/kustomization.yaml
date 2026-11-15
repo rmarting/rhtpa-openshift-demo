@@ -1,0 +1,11 @@
+# Manifests that are the same on OpenShift Local and on a standard OpenShift cluster.
+# Hostnames in Keycloak, the trustify realm, and TrustedProfileAnalyzer are placeholders.
+# Apply crc/ or ocp/, which replace those hostnames. See ./deploy/deploy.sh.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-operators
+  - 10-database
+  - 20-keycloak
+  - 30-realm
+  - 40-rhtpa

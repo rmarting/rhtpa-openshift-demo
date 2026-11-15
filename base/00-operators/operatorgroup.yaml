@@ -1,0 +1,12 @@
+# One OperatorGroup per namespace. Both operators watch only this namespace.
+# RHTPA 3.1 supports OwnNamespace and SingleNamespace, not AllNamespaces.
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: trusted-profile-analyzer
+  labels:
+    app.kubernetes.io/part-of: rhtpa
+spec:
+  targetNamespaces:
+    - trusted-profile-analyzer
+  upgradeStrategy: Default

@@ -1,0 +1,189 @@
+apiVersion: rhtpa.io/v1
+kind: TrustedProfileAnalyzer
+metadata:
+  name: rhtpa
+  labels:
+    app.kubernetes.io/name: rhtpa
+    app.kubernetes.io/part-of: rhtpa
+spec:
+  # Replaced by the crc and ocp overlays. The leading hyphen is required.
+  appDomain: -trusted-profile-analyzer.example.com
+  exploitIntelligence:
+    enabled: false
+  infrastructure:
+    port: 9010
+  metrics:
+    enabled: false
+  tracing:
+    enabled: false
+  replicas: 1
+  partOf: trustify
+  readOnly: false
+  openshift:
+    useServiceCa: true
+  ingress:
+    className: openshift-default
+    additionalAnnotations:
+      haproxy.router.openshift.io/timeout: 5m
+  tls:
+    additionalTrustAnchor: /etc/trust-anchor/tls.crt
+  extraVolumes:
+    - name: trust-anchor
+      configMap:
+        name: ingress-ca
+    - name: rhtpa-rhlw-creds
+      secret:
+        secretName: rhtpa-rhlw-creds
+  extraVolumeMounts:
+    - name: trust-anchor
+      mountPath: /etc/trust-anchor
+      readOnly: true
+    - name: rhtpa-rhlw-creds
+      mountPath: /run/secrets/rhtpa-rhlw-creds
+      readOnly: true
+  storage:
+    type: filesystem
+    size: 10Gi
+  oidc:
+    issuerUrl: https://sso-trusted-profile-analyzer.example.com/realms/trustify
+    uiScope: openid
+    loadUser: true
+    clients:
+      frontend:
+        clientId: frontend
+      cli:
+        clientId: cli
+        clientSecret:
+          valueFrom:
+            secretKeyRef:
+              name: oidc-cli
+              key: client-secret
+  database:
+    host: rhtpa-postgresql
+    port: "5432"
+    name: trustify
+    username: trustify
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: rhtpa-db
+          key: password
+    sslMode: disable
+  createDatabase:
+    name: trustify
+    username: trustify
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: rhtpa-db
+          key: password
+  migrateDatabase:
+    username: trustify
+    password:
+      valueFrom:
+        secretKeyRef:
+          name: rhtpa-db
+          key: password
+  modules:
+    createDatabase:
+      enabled: true
+    migrateDatabase:
+      enabled: true
+    server:
+      enabled: true
+      replicas: 1
+      ingress: {}
+      recommendPatterns:
+        - "^(.+)[.-]redhat-[0-9]+$"
+        - "^(.+)[.-]rhlw-[0-9]+$"
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          memory: 4Gi
+      rust:
+        logFilter: info
+    importer:
+      enabled: true
+      replicas: 1
+      concurrency: 1
+      resources:
+        requests:
+          cpu: 200m
+          memory: 1Gi
+        limits:
+          memory: 2Gi
+      workingDirectory:
+        size: 10Gi
+    createImporters:
+      enabled: true
+      importers:
+        redhat-sboms:
+          sbom:
+            description: All Red Hat SBOMs
+            period: 1d
+            source: https://security.access.redhat.com/data/sbom/v1/
+            keys:
+              - https://security.access.redhat.com/data/97f5eac4.txt#77E79ABE93673533ED09EBE2DCE3823597F5EAC4
+            disabled: true
+            fetchRetries: 50
+        redhat-csaf:
+          csaf:
+            description: All Red Hat CSAF data
+            period: 1d
+            source: redhat.com
+            disabled: true
+            fetchRetries: 50
+        cve:
+          cve:
+            description: CVE list v5
+            period: 1d
+            source: https://github.com/CVEProject/cvelistV5
+            disabled: true
+        osv-github:
+          osv:
+            description: GitHub Advisory Database
+            period: 1d
+            source: https://github.com/github/advisory-database
+            path: advisories
+            disabled: true
+        quay-redhat-user-workloads:
+          quay:
+            description: SBOMs from konflux image attachments
+            period: 1d
+            source: quay.io
+            namespace: redhat-user-workloads
+            disabled: true
+        redhat-lightwell-osv-java:
+          http:
+            disabled: true
+            period: 1d
+            source: https://packages.redhat.com/lightwell/osv/java/remediated/
+            discovery:
+              type: pulp
+            auth:
+              method:
+                type: basic
+                username:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.user
+                password:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.token
+        redhat-lightwell-osv-python:
+          http:
+            disabled: true
+            period: 1d
+            source: https://packages.redhat.com/lightwell/osv/python/remediated/
+            discovery:
+              type: pulp
+            auth:
+              method:
+                type: basic
+                username:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.user
+                password:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.token

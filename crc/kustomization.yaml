@@ -1,0 +1,12 @@
+# OpenShift Local. Hostnames use the default apps domain apps-crc.testing.
+# First install: ./deploy/deploy.sh crc
+# After the operators exist, oc apply -k crc reapplies this overlay, and
+# oc delete -k crc removes it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base/00-operators
+  - ../base/10-database
+  - 20-keycloak
+  - 30-realm
+  - 40-rhtpa

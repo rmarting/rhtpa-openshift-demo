@@ -1,0 +1,52 @@
+# One Keycloak instance. The custom resource name is keycloak-sso so the identity
+# provider stays independent of the Trusted Profile Analyzer custom resource.
+#
+# HTTP is enabled and the route uses edge termination, so the certificate
+# browsers and RHTPA see is the OpenShift router certificate. No http.tlsSecret:
+# the operator then sets route.openshift.io/termination=edge and proxies to the
+# HTTP port.
+#
+# Hostname is sso joined to the RHTPA appDomain. The crc and ocp overlays replace
+# spec.hostname.hostname. The operator's default issuer, when oidc.issuerUrl is
+# omitted, is https://sso<appDomain>/realms/trustify.
+apiVersion: k8s.keycloak.org/v2beta1
+kind: Keycloak
+metadata:
+  name: keycloak-sso
+  labels:
+    app.kubernetes.io/name: keycloak-sso
+    app.kubernetes.io/part-of: keycloak
+spec:
+  instances: 1
+  db:
+    vendor: postgres
+    host: keycloak-postgresql
+    port: 5432
+    database: keycloak
+    usernameSecret:
+      name: keycloak-db
+      key: username
+    passwordSecret:
+      name: keycloak-db
+      key: password
+  http:
+    httpEnabled: true
+  hostname:
+    hostname: sso-trusted-profile-analyzer.example.com
+    strict: true
+  proxy:
+    headers: xforwarded
+  ingress:
+    className: openshift-default
+    annotations:
+      haproxy.router.openshift.io/timeout: 5m
+  bootstrapAdmin:
+    user:
+      secret: keycloak-initial-admin
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 2Gi

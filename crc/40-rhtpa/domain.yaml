@@ -1,0 +1,8 @@
+apiVersion: rhtpa.io/v1
+kind: TrustedProfileAnalyzer
+metadata:
+  name: rhtpa
+spec:
+  appDomain: -trusted-profile-analyzer.apps-crc.testing
+  oidc:
+    issuerUrl: https://sso-trusted-profile-analyzer.apps-crc.testing/realms/trustify

@@ -1,0 +1,60 @@
+# Operating system and editors
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+*.tmp
+.idea/
+.vscode/
+*.code-workspace
+
+# Markdown preview, lint caches, and local editor state
+*.md.html
+.markdownlintcache
+node_modules/
+.obsidian/cache
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# Generated documentation (MkDocs, Sphinx, Jekyll, Hugo, Docusaurus, Antora, AsciiDoctor)
+site/
+_site/
+.jekyll-cache/
+.jekyll-metadata
+docs/_build/
+_build/
+public/
+resources/_gen/
+.hugo_build.lock
+.docusaurus/
+.cache/
+build/site/
+.asciidoctor/
+
+# Kubernetes local client files and packaged charts
+kubeconfig
+*.kubeconfig
+.kube/
+charts/*.tgz
+helm/*.tgz
+
+# OpenShift Local, pull secrets, and collected diagnostics
+.crc/
+pull-secret
+pull-secret.txt
+*pull-secret*
+kubeadmin-password
+must-gather.local.*/
+inspect.local.*/
+*.creds
+*.log
+
+# Local credentials. Lab Secrets under base/ are part of this repository.
+.env
+.env.*
+!.env.example

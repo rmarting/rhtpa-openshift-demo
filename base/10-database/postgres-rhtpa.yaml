@@ -1,0 +1,100 @@
+# PostgreSQL for RHTPA. The operator does not deploy a database. It expects an
+# existing instance and runs create-database plus schema migration jobs against it.
+# Image: registry.redhat.io/rhel9/postgresql-16, built to run as an arbitrary UID.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rhtpa-postgresql
+  labels:
+    app.kubernetes.io/name: rhtpa-postgresql
+    app.kubernetes.io/part-of: rhtpa
+spec:
+  selector:
+    app.kubernetes.io/name: rhtpa-postgresql
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rhtpa-postgresql
+  labels:
+    app.kubernetes.io/name: rhtpa-postgresql
+    app.kubernetes.io/part-of: rhtpa
+spec:
+  serviceName: rhtpa-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rhtpa-postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rhtpa-postgresql
+        app.kubernetes.io/part-of: rhtpa
+    spec:
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-16:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: POSTGRESQL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rhtpa-db
+                  key: postgres-password
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rhtpa-db
+                  key: username
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rhtpa-db
+                  key: password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: rhtpa-db
+                  key: database
+            - name: POSTGRESQL_MAX_CONNECTIONS
+              value: "200"
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgsql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/name: rhtpa-postgresql
+          app.kubernetes.io/part-of: rhtpa
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
