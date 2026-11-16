@@ -1,0 +1,81 @@
+# Cache for vulnerability and license results. Default TTL in the backend is one day.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rhda-backend-redis
+  labels:
+    app.kubernetes.io/name: rhda-backend-redis
+    app.kubernetes.io/part-of: rhda
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhda-backend-redis
+  labels:
+    app.kubernetes.io/name: rhda-backend-redis
+    app.kubernetes.io/part-of: rhda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhda-backend-redis
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: rhda-backend-redis
+        app.kubernetes.io/name: rhda-backend-redis
+        app.kubernetes.io/part-of: rhda
+    spec:
+      containers:
+        - name: redis
+          image: docker.io/library/redis:8-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rhda-backend-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rhda-backend-redis
+  labels:
+    app.kubernetes.io/name: rhda-backend-redis
+    app.kubernetes.io/part-of: rhda
+spec:
+  selector:
+    app: rhda-backend-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

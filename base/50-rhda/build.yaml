@@ -1,0 +1,43 @@
+# Image built on the cluster from the upstream RHDA backend.
+# The deploy script starts the build: oc start-build bc/rhda-backend --follow
+# Dockerfile.jvm.staged compiles the Maven project and keeps the management port on 9000.
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: rhda-backend
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: rhda-backend
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+spec:
+  successfulBuildsHistoryLimit: 2
+  failedBuildsHistoryLimit: 2
+  source:
+    type: Git
+    git:
+      uri: https://github.com/guacsec/trustify-dependency-analytics
+      ref: v2.1.0
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: src/main/docker/Dockerfile.jvm.staged
+  output:
+    to:
+      kind: ImageStreamTag
+      name: rhda-backend:latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 4Gi

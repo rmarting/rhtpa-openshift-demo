@@ -1,0 +1,11 @@
+# Hostnames are placeholders. The crc and ocp overlays replace them.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhda-backend-config
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+data:
+  auth-server-url: https://sso-trusted-profile-analyzer.example.com/realms/trustify
+  explore-url: https://server-trusted-profile-analyzer.example.com/search

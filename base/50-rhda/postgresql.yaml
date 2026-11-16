@@ -1,0 +1,118 @@
+# Database for the RHDA backend (model cards and guardrails). Flyway creates the schema.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rhda-backend-postgresql
+  labels:
+    app.kubernetes.io/name: rhda-backend-postgresql
+    app.kubernetes.io/part-of: rhda
+type: Opaque
+stringData:
+  database-name: trustify_da
+  database-user: trustify_da
+  database-password: rhda-lab-pass
+  admin-password: rhda-admin-lab-pass
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rhda-backend-postgresql
+  labels:
+    app.kubernetes.io/name: rhda-backend-postgresql
+    app.kubernetes.io/part-of: rhda
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhda-backend-postgresql
+  labels:
+    app.kubernetes.io/name: rhda-backend-postgresql
+    app.kubernetes.io/part-of: rhda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhda-backend-postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: rhda-backend-postgresql
+        app.kubernetes.io/name: rhda-backend-postgresql
+        app.kubernetes.io/part-of: rhda
+    spec:
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-16:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: POSTGRESQL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: admin-password
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-name
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-h", "127.0.0.1", "-U", "postgres"]
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/pgsql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: rhda-backend-postgresql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rhda-backend-postgresql
+  labels:
+    app.kubernetes.io/name: rhda-backend-postgresql
+    app.kubernetes.io/part-of: rhda
+spec:
+  selector:
+    app: rhda-backend-postgresql
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql

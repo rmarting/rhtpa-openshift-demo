@@ -1,0 +1,186 @@
+# trustify-dependency-analytics, the RHDA backend from
+# https://github.com/guacsec/trustify-dependency-analytics
+# The container image is the rhda-backend ImageStream built by BuildConfig rhda-backend.
+# Wired to this repository's RHTPA server and the trustify realm on keycloak-sso.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhda-backend
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+  annotations:
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"rhda-backend:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"rhda-backend\")].image"}]'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhda-backend
+  template:
+    metadata:
+      labels:
+        app: rhda-backend
+        app.kubernetes.io/name: rhda-backend
+        app.kubernetes.io/part-of: rhda
+    spec:
+      initContainers:
+        - name: import-trust
+          image: registry.redhat.io/ubi9/openjdk-21-runtime:1.23
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              cp /etc/pki/java/cacerts /tmp/truststore/cacerts
+              chmod 644 /tmp/truststore/cacerts
+              keytool -importcert -noprompt -trustcacerts \
+                -keystore /tmp/truststore/cacerts \
+                -storepass changeit \
+                -alias openshift-service-ca \
+                -file /tmp/service-ca/service-ca.crt
+              keytool -importcert -noprompt -trustcacerts \
+                -keystore /tmp/truststore/cacerts \
+                -storepass changeit \
+                -alias openshift-ingress-ca \
+                -file /tmp/ingress-ca/tls.crt
+          volumeMounts:
+            - name: service-ca
+              mountPath: /tmp/service-ca
+              readOnly: true
+            - name: ingress-ca
+              mountPath: /tmp/ingress-ca
+              readOnly: true
+            - name: truststore
+              mountPath: /tmp/truststore
+      containers:
+        - name: rhda-backend
+          image: rhda-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          env:
+            - name: DB_REDIS_HOST
+              value: rhda-backend-redis
+            - name: DB_REDIS_PORT
+              value: "6379"
+            - name: DB_POSTGRES_HOST
+              value: rhda-backend-postgresql
+            - name: DB_POSTGRES_PORT
+              value: "5432"
+            - name: DB_POSTGRES_SSLMODE
+              value: disable
+            - name: DB_POSTGRES_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-name
+            - name: DB_POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-user
+            - name: DB_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rhda-backend-postgresql
+                  key: database-password
+            - name: PROVIDER_RHTPA_HOST
+              value: https://server.trusted-profile-analyzer.svc:443
+            - name: PROVIDER_RHTPA_AUTH_CLIENT_ID
+              value: cli
+            - name: PROVIDER_RHTPA_AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oidc-cli
+                  key: client-secret
+            - name: PROVIDER_RHTPA_AUTH_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: rhda-backend-config
+                  key: auth-server-url
+            - name: BRANDING_DISPLAY_NAME
+              value: Red Hat Trusted Profile Analyzer
+            - name: BRANDING_EXPLORE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: rhda-backend-config
+                  key: explore-url
+            - name: BRANDING_EXPLORE_TITLE
+              value: Open your Red Hat Trusted Profile Analyzer
+            - name: BRANDING_EXPLORE_DESCRIPTION
+              value: Red Hat Trusted Profile Analyzer helps organizations manage SBOMs, vulnerability advisories, and VEX data.
+            - name: MONITORING_ENABLED
+              value: "false"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Djavax.net.ssl.trustStore=/tmp/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: management
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: management
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: truststore
+              mountPath: /tmp/truststore
+              readOnly: true
+      volumes:
+        - name: service-ca
+          configMap:
+            name: rhda-service-ca
+        - name: ingress-ca
+          configMap:
+            name: ingress-ca
+        - name: truststore
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rhda-backend
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+spec:
+  selector:
+    app: rhda-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: management
+      port: 9000
+      targetPort: management
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: rhda-backend
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+spec:
+  to:
+    kind: Service
+    name: rhda-backend
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

@@ -1,0 +1,11 @@
+# OpenShift fills this ConfigMap with the cluster service CA.
+# The RHDA backend uses it to trust the RHTPA server service certificate.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhda-service-ca
+  labels:
+    app.kubernetes.io/name: rhda-backend
+    app.kubernetes.io/part-of: rhda
+  annotations:
+    service.beta.openshift.io/inject-cabundle: "true"

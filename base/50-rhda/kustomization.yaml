@@ -1,0 +1,12 @@
+# Optional Red Hat Dependency Analytics backend. Not included in base/kustomization.yaml.
+# Apply crc/50-rhda or ocp/50-rhda after Keycloak and RHTPA are running.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: trusted-profile-analyzer
+resources:
+  - service-ca.yaml
+  - postgresql.yaml
+  - redis.yaml
+  - config.yaml
+  - build.yaml
+  - rhda-backend.yaml

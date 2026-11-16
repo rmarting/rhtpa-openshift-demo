@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rhda-backend-config
+data:
+  auth-server-url: https://sso-trusted-profile-analyzer.__INGRESS_DOMAIN__/realms/trustify
+  explore-url: https://server-trusted-profile-analyzer.__INGRESS_DOMAIN__/search

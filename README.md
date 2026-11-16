@@ -458,6 +458,80 @@ The console is empty of advisories until you upload an SBOM or enable an importe
 a successful login means the install worked. An upload as `analyst` is rejected.
 The same upload as `admin` is accepted.
 
+## Red Hat Dependency Analytics
+
+[Red Hat Dependency Analytics](https://marketplace.visualstudio.com/items?itemName=redhat.fabric8-analytics) is the IDE extension that inspects an application's dependencies.
+From a software bill of materials it reports known vulnerabilities, license information, and remediation
+suggestions. By default the extension calls Red Hat's hosted backend at `https://rhda.rhcloud.com`.
+This repository runs that same backend in the cluster and points it at the RHTPA instance installed above.
+
+This is the namespace after that stage. The group at the top is Dependency Analytics.
+The other objects are the RHTPA and Keycloak install from the earlier chapters.
+
+![Red Hat Dependency Analytics on the RHTPA namespace](./media/topology-rhda.png)
+
+| Piece | Role |
+|---|---|
+| `rhda-backend` | Receives an SBOM from the IDE, asks RHTPA about those packages, and returns the report |
+| `rhda-backend-postgresql` | Database for the backend. Password `rhda-lab-pass` in Secret `rhda-backend-postgresql` |
+| `rhda-backend-redis` | Cache for vulnerability and license results |
+| Keycloak client `cli` | Client-credentials grant. The secret is the existing Secret `oidc-cli` |
+| RHTPA `server` service | `https://server.trusted-profile-analyzer.svc:443` |
+
+### Install
+
+On OpenShift Local:
+
+```bash
+./deploy/deploy-rhda.sh crc
+```
+
+On a standard OpenShift cluster:
+
+```bash
+./deploy/deploy-rhda.sh ocp
+```
+
+It reads the ingress domain and writes it into a temporary copy of `ocp/50-rhda` before apply. The files in git keep `__INGRESS_DOMAIN__`.
+
+The script stops when Keycloak `keycloak-sso`, RHTPA `deployment/server`, Secret `oidc-cli`, or ConfigMap `ingress-ca` is missing. To apply the stage yourself on OpenShift Local:
+
+```bash
+oc apply -k crc/50-rhda
+oc start-build bc/rhda-backend -n trusted-profile-analyzer --follow
+oc wait --for=condition=Available deployment/rhda-backend-postgresql -n trusted-profile-analyzer --timeout=300s
+oc wait --for=condition=Available deployment/rhda-backend-redis -n trusted-profile-analyzer --timeout=300s
+oc wait --for=condition=Available deployment/rhda-backend -n trusted-profile-analyzer --timeout=900s
+oc get route rhda-backend -n trusted-profile-analyzer -o jsonpath='https://{.spec.host}{"\n"}'
+```
+
+On OpenShift Local the route host is `rhda-backend-trusted-profile-analyzer.apps-crc.testing`.
+On a standard cluster the same name uses that cluster's apps domain. The script prints the URL.
+
+The backend trusts two CAs. `rhda-service-ca` is the OpenShift service CA, used for the RHTPA service certificate.
+`ingress-ca` is the router CA from `./deploy/import-router-ca.sh`, used when the backend calls the Keycloak route for a token.
+
+### Point the IDE at this backend
+
+In VS Code, set **Red Hat Dependency Analytics: Backend URL** to the route printed above, or add it to the workspace `.vscode/settings.json`:
+
+```json
+{
+  "redhat.dependency.analytics.exhort.backendUrl": "https://rhda-backend-trusted-profile-analyzer.apps-crc.testing"
+}
+```
+
+On a standard cluster, replace `apps-crc.testing` with the ingress domain. The extension id is `redhat.fabric8-analytics`.
+Reports link back to this RHTPA console at `/search`.
+
+### Remove only this component
+
+```bash
+oc delete -k crc/50-rhda
+```
+
+On a standard cluster, use `oc delete -k ocp/50-rhda`. That removes the RHDA backend, its database, and its cache. Keycloak and RHTPA stay in place.
+
 ## Remove it
 
 ### OpenShift Local
