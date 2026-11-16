@@ -566,7 +566,7 @@ oc delete crd trustedprofileanalyzers.rhtpa.io \
 
 ### Unable to authenticate to Lightwell Network repositories
 
-Issue: []()
+Issue: [https://redhat.atlassian.net/browse/TC-7588](https://redhat.atlassian.net/browse/TC-7588)
 
 The current TPA 3.1.1 does not manage correctly the injection of the Lightwell credentials
 from a file system mounted in a secret.
