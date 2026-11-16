@@ -116,6 +116,8 @@ spec:
           memory: 2Gi
       workingDirectory:
         size: 10Gi
+      credentialPaths:
+        - /run/secrets/rhtpa-rhlw-creds
     createImporters:
       enabled: true
       importers:
@@ -167,10 +169,10 @@ spec:
                 type: basic
                 username:
                   type: file
-                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.user
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME
                 password:
                   type: file
-                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.token
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD
         redhat-lightwell-osv-python:
           http:
             disabled: true
@@ -183,7 +185,7 @@ spec:
                 type: basic
                 username:
                   type: file
-                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.user
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME
                 password:
                   type: file
-                  value: /run/secrets/rhtpa-rhlw-creds/rhlw.token
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD

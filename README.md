@@ -206,7 +206,7 @@ The realm contains:
 
 `frontend` has `directAccessGrantsEnabled: false`. The console uses the authorization code flow.
 
-### RHTPA
+### Red Hat Trusted Profile Analyzer Instance
 
 #### Secrets
 
@@ -231,8 +231,8 @@ Create Secret `rhtpa-rhlw-creds` yourself in the `trusted-profile-analyzer` name
 ```bash
 oc create secret generic rhtpa-rhlw-creds \
   -n trusted-profile-analyzer \
-  --from-literal=rhlw.user="$LW_USERNAME" \
-  --from-literal=rhlw.token="$LW_PASSWORD"
+  --from-literal=RH_LW_USERNAME="$LW_USERNAME" \
+  --from-literal=RH_LW_PASSWORD="$LW_PASSWORD"
 ```
 
 The keys must be exactly `rhlw.user` and `rhlw.token`. To change them later, delete the Secret, create it again with the same command and the new values, then restart the importer:
@@ -241,8 +241,8 @@ The keys must be exactly `rhlw.user` and `rhlw.token`. To change them later, del
 oc delete secret rhtpa-rhlw-creds -n trusted-profile-analyzer
 oc create secret generic rhtpa-rhlw-creds \
   -n trusted-profile-analyzer \
-  --from-literal=rhlw.user="$LW_USERNAME" \
-  --from-literal=rhlw.token="$LW_PASSWORD"
+  --from-literal=RH_LW_USERNAME="$LW_USERNAME" \
+  --from-literal=RH_LW_PASSWORD="$LW_PASSWORD"
 oc rollout restart deployment/importer -n trusted-profile-analyzer
 ```
 
@@ -395,7 +395,7 @@ The realm contains:
 
 `frontend` has `directAccessGrantsEnabled: false`. The console uses the authorization code flow.
 
-### RHTPA
+### Red Hat Trusted Profile Analyzer Instance
 
 #### Secrets
 
@@ -413,8 +413,8 @@ export LW_USERNAME=<your-user-name>
 export LW_PASSWORD=<your-user-token>
 oc create secret generic rhtpa-rhlw-creds \
   -n trusted-profile-analyzer \
-  --from-literal=rhlw.user="$LW_USERNAME" \
-  --from-literal=rhlw.token="$LW_PASSWORD"
+  --from-literal=RH_LW_USERNAME="$LW_USERNAME" \
+  --from-literal=RH_LW_PASSWORD="$LW_PASSWORD"
 ```
 
 The namespace exists after the Operators stage. The custom resource mounts that Secret at `/run/secrets/rhtpa-rhlw-creds`.
@@ -428,8 +428,8 @@ then restart the importer:
 oc delete secret rhtpa-rhlw-creds -n trusted-profile-analyzer
 oc create secret generic rhtpa-rhlw-creds \
   -n trusted-profile-analyzer \
-  --from-literal=rhlw.user="$LW_USERNAME" \
-  --from-literal=rhlw.token="$LW_PASSWORD"
+  --from-literal=RH_LW_USERNAME="$LW_USERNAME" \
+  --from-literal=RH_LW_PASSWORD="$LW_PASSWORD"
 oc rollout restart deployment/importer -n trusted-profile-analyzer
 ```
 
@@ -560,4 +560,87 @@ reinstall them. Delete those definitions only when nothing else on the cluster u
 oc delete crd trustedprofileanalyzers.rhtpa.io \
   keycloaks.k8s.keycloak.org \
   keycloakrealmimports.k8s.keycloak.org
+```
+
+## Troubleshooting
+
+### Unable to authenticate to Lightwell Network repositories
+
+Issue: []()
+
+The current TPA 3.1.1 does not manage correctly the injection of the Lightwell credentials
+from a file system mounted in a secret.
+
+Sample log message:
+
+```text
+2026-11-16T14:00:08.407177Z ERROR ThreadId(01) run:run_once:run_once_http: trustify_module_importer::runner::http: error=file credential source is disabled; set IMPORTER_CREDENTIAL_PATHS to allow one or more paths http=HttpImporter {
+common: CommonImporter {
+disabled: false,
+period: 86400s,
+description: None,
+labels: Labels(
+{},
+),
+},
+source: "https://packages.redhat.com/lightwell/osv/python/remediated/",
+discovery: Pulp,
+auth: Some(
+AuthConfig {
+method: Basic {
+username: File(
+"/run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME",
+),
+password: File(
+"/run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD",
+),
+},
+},
+),
+only_patterns: [],
+fetch_retries: None,
+} _continuation=Null
+```
+
+Workaround:
+
+* Add the environment variable `IMPORTER_CREDENTIAL_PATHS` with value `/run/secrets/rhtpa-rhlw-creds`
+for the `importer` deployment.
+
+### OSV Import fails for ecosytem "Red Hat Lightwell:Maven"
+
+Issue: [https://redhat.atlassian.net/browse/TC-7303](https://redhat.atlassian.net/browse/TC-7303)
+
+The current TPA 3.1.1 does not identify the new Lightwell ecosystem `Red Hat Lightwell:Maven` and
+rejects all the entries with that value. This issue will be fixed in TPA 3.1.2 and beyond.
+
+Sample log message:
+
+```text
+2026-11-16T14:46:37.210286Z INFO ThreadId(01) run:run_once:run_once_http:transaction:transaction_with_config:ingest:detect_as: trustify_module_ingestor::service::detect: error=invalid format: Failed to parse: unknown variant `Red Hat Lightwell:Maven`, expected `Ecosystem` http=HttpImporter {
+common: CommonImporter {
+disabled: false,
+period: 86400s,
+description: None,
+labels: Labels(
+{},
+),
+},
+source: "https://packages.redhat.com/lightwell/osv/java/remediated/",
+discovery: Pulp,
+auth: Some(
+AuthConfig {
+method: Basic {
+username: File(
+"/run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME",
+),
+password: File(
+"/run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD",
+),
+},
+},
+),
+only_patterns: [],
+fetch_retries: None,
+} _continuation=Null
 ```
