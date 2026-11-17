@@ -538,7 +538,6 @@ On a standard cluster, use `oc delete -k ocp/50-rhda`. That removes the RHDA bac
 
 ```bash
 oc delete -k crc
-oc delete namespace trusted-profile-analyzer --wait=false
 ```
 
 Stop the laptop cluster with `crc stop`. `crc delete` removes the virtual machine and every namespace in it.
@@ -547,7 +546,6 @@ Stop the laptop cluster with `crc stop`. `crc delete` removes the virtual machin
 
 ```bash
 oc delete -k ocp
-oc delete namespace trusted-profile-analyzer --wait=false
 ```
 
 `oc delete -k ocp` matches the objects on the cluster. The apps domain is not part of their names.
