@@ -110,10 +110,10 @@ spec:
       concurrency: 1
       resources:
         requests:
-          cpu: 200m
-          memory: 1Gi
-        limits:
+          cpu: 500m
           memory: 2Gi
+        limits:
+          memory: 4Gi
       workingDirectory:
         size: 10Gi
       credentialPaths:
@@ -152,7 +152,7 @@ spec:
             disabled: true
         quay-redhat-user-workloads:
           quay:
-            description: SBOMs from konflux image attachments
+            description: SBOMs from build image attachments
             period: 1d
             source: quay.io
             namespace: redhat-user-workloads
