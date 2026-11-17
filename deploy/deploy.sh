@@ -155,6 +155,24 @@ wait_packagemanifest() {
   exit 1
 }
 
+# The operator creates create-db and migrate-db before the server and importer
+# Deployments. oc wait fails immediately when the object is still missing.
+wait_for_deployment() {
+  local name="$1"
+  local deadline=$((SECONDS + 900))
+  echo "Waiting for deployment/${name} to be created"
+  while (( SECONDS < deadline )); do
+    if oc get "deployment/${name}" -n "$NS" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 10
+  done
+  echo "deployment/${name} was not created in ${NS}." >&2
+  echo "The operator runs Jobs create-db and migrate-db before this Deployment." >&2
+  oc get jobs,deployments -n "$NS" >&2 || true
+  exit 1
+}
+
 echo
 echo "Checking operator channels"
 wait_packagemanifest rhtpa-operator
@@ -255,6 +273,8 @@ if ! oc get secret rhtpa-rhlw-creds -n "$NS" >/dev/null 2>&1; then
   exit 1
 fi
 apply_stage 40-rhtpa
+wait_for_deployment server
+wait_for_deployment importer
 oc wait --for=condition=Available deployment/server -n "$NS" --timeout=900s
 oc wait --for=condition=Available deployment/importer -n "$NS" --timeout=900s
 
