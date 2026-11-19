@@ -264,12 +264,54 @@ echo "Stage 5: trustify realm, clients, and users"
 apply_stage 30-realm
 oc wait --for=condition=Done keycloakrealmimport/rhtpa -n "$NS" --timeout=900s
 
+if [[ "$platform" == "ocp" ]]; then
+  echo
+  echo "Phase 35-storage: object bucket"
+  if ! oc get crd objectbucketclaims.objectbucket.io >/dev/null 2>&1; then
+    echo "ObjectBucketClaim is not installed. Install OpenShift Data Foundation, then run this script again." >&2
+    exit 1
+  fi
+  if ! oc get storageclass openshift-storage.noobaa.io >/dev/null 2>&1; then
+    echo "StorageClass openshift-storage.noobaa.io is missing. OpenShift Data Foundation provides it." >&2
+    exit 1
+  fi
+  apply_stage 35-storage
+  echo "Waiting for ConfigMap ${NS}/tpa-bucket-claim key BUCKET_NAME"
+  bucket_name=""
+  deadline=$((SECONDS + 300))
+  while (( SECONDS < deadline )); do
+    bucket_name="$(oc get configmap tpa-bucket-claim -n "$NS" -o jsonpath='{.data.BUCKET_NAME}' 2>/dev/null || true)"
+    access_key="$(oc get secret tpa-bucket-claim -n "$NS" -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' 2>/dev/null || true)"
+    if [[ -n "$bucket_name" && -n "$access_key" ]]; then
+      break
+    fi
+    echo "  object bucket: waiting"
+    sleep 5
+  done
+  if [[ -z "$bucket_name" || -z "$access_key" ]]; then
+    echo "ObjectBucketClaim tpa-bucket-claim did not publish BUCKET_NAME and AWS_ACCESS_KEY_ID." >&2
+    oc get objectbucketclaim,configmap,secret tpa-bucket-claim -n "$NS" >&2 || true
+    oc describe objectbucketclaim tpa-bucket-claim -n "$NS" >&2 || true
+    exit 1
+  fi
+  if [[ ! "$bucket_name" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]; then
+    echo "Refusing to use bucket name '${bucket_name}'." >&2
+    exit 1
+  fi
+  echo "  BUCKET_NAME: ${bucket_name}"
+  find "${OCP_WORK}/ocp" -type f -exec sed -i "s|__BUCKET_NAME__|${bucket_name}|g" {} +
+  if grep -R -q "__BUCKET_NAME__" "${OCP_WORK}/ocp"; then
+    echo "Failed to write BUCKET_NAME into the ocp overlay." >&2
+    exit 1
+  fi
+fi
+
 echo
 echo "Stage 6: Trusted Profile Analyzer"
 if ! oc get secret rhtpa-rhlw-creds -n "$NS" >/dev/null 2>&1; then
   echo "Secret ${NS}/rhtpa-rhlw-creds is missing." >&2
   echo "The Lightwell importers read the username and token from files in that Secret." >&2
-  echo "Create it yourself (Kustomize does not), then run this script again. See README section 4.6." >&2
+  echo "Create it yourself (Kustomize does not), then run this script again. See the RHTPA stage in README-${platform}.md." >&2
   exit 1
 fi
 apply_stage 40-rhtpa

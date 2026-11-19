@@ -1,0 +1,9 @@
+# Object bucket for RHTPA documents. OpenShift Data Foundation must already
+# be installed. The NooBaa storage class creates ConfigMap and Secret
+# tpa-bucket-claim. ./deploy/deploy.sh ocp reads BUCKET_NAME from that
+# ConfigMap and writes it into ocp/40-rhtpa before applying the custom resource.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: trusted-profile-analyzer
+resources:
+  - storage-objectbucketclaim.yaml

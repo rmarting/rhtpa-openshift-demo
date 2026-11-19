@@ -9,4 +9,5 @@ resources:
   - ../base/10-database
   - 20-keycloak
   - 30-realm
+  - 35-storage
   - 40-rhtpa

@@ -21,29 +21,6 @@ spec:
   readOnly: false
   openshift:
     useServiceCa: true
-  ingress:
-    className: openshift-default
-    additionalAnnotations:
-      haproxy.router.openshift.io/timeout: 5m
-  tls:
-    additionalTrustAnchor: /etc/trust-anchor/tls.crt
-  extraVolumes:
-    - name: trust-anchor
-      configMap:
-        name: ingress-ca
-    - name: rhtpa-rhlw-creds
-      secret:
-        secretName: rhtpa-rhlw-creds
-  extraVolumeMounts:
-    - name: trust-anchor
-      mountPath: /etc/trust-anchor
-      readOnly: true
-    - name: rhtpa-rhlw-creds
-      mountPath: /run/secrets/rhtpa-rhlw-creds
-      readOnly: true
-  storage:
-    type: filesystem
-    size: 10Gi
   oidc:
     issuerUrl: https://sso-trusted-profile-analyzer.example.com/realms/trustify
     uiScope: openid
@@ -157,8 +134,33 @@ spec:
             source: quay.io
             namespace: redhat-user-workloads
             disabled: true
-        redhat-lightwell-osv-java:
+        redhat-lightwell-osv-dev:
+          osv:
+            description: Red Hat Lightwell Security Data on osv.dev
+            period: 1d
+            source: https://github.com/project-lightwell/lightwell-osv
+            path: advisories
+            disabled: true            
+        redhat-lightwell-osv-java-predisclosure:
           http:
+            description: Red Hat Lightwell Security Data on Java Predisclosure repository
+            disabled: true
+            period: 1d
+            source: https://packages.redhat.com/lightwell/osv/java/predisclosure/
+            discovery:
+              type: pulp
+            auth:
+              method:
+                type: basic
+                username:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME
+                password:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD
+        redhat-lightwell-osv-java-remediated:
+          http:
+            description: Red Hat Lightwell Security Data on Java Remediated repository
             disabled: true
             period: 1d
             source: https://packages.redhat.com/lightwell/osv/java/remediated/
@@ -173,8 +175,9 @@ spec:
                 password:
                   type: file
                   value: /run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD
-        redhat-lightwell-osv-python:
+        redhat-lightwell-osv-python-remediated:
           http:
+            description: Red Hat Lightwell Security Data on Python Remediated repository
             disabled: true
             period: 1d
             source: https://packages.redhat.com/lightwell/osv/python/remediated/

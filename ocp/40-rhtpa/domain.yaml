@@ -6,3 +6,25 @@ spec:
   appDomain: -trusted-profile-analyzer.__INGRESS_DOMAIN__
   oidc:
     issuerUrl: https://sso-trusted-profile-analyzer.__INGRESS_DOMAIN__/realms/trustify
+  extraVolumes:
+    - name: rhtpa-rhlw-creds
+      secret:
+        secretName: rhtpa-rhlw-creds
+  extraVolumeMounts:
+    - name: rhtpa-rhlw-creds
+      mountPath: /run/secrets/rhtpa-rhlw-creds
+      readOnly: true
+  storage:
+    type: s3
+    bucket: __BUCKET_NAME__
+    region: https://s3-openshift-storage.__INGRESS_DOMAIN__:443
+    accessKey:
+      valueFrom:
+        secretKeyRef:
+          key: AWS_ACCESS_KEY_ID
+          name: tpa-bucket-claim
+    secretKey:
+      valueFrom:
+        secretKeyRef:
+          key: AWS_SECRET_ACCESS_KEY
+          name: tpa-bucket-claim
