@@ -274,7 +274,7 @@ or add it to the workspace `.vscode/settings.json`:
 
 ```json
 {
-  "redhat.dependency.analytics.exhort.backendUrl": "https://rhda-backend-trusted-profile-analyzer.apps-crc.testing"
+  "redHatDependencyAnalytics.backendUrl": "https://rhda-backend-trusted-profile-analyzer.apps-crc.testing"
 }
 ```
 

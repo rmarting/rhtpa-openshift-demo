@@ -273,7 +273,7 @@ workspace `.vscode/settings.json`. Replace `apps-crc.testing` with this cluster'
 
 ```json
 {
-  "redhat.dependency.analytics.exhort.backendUrl": "https://rhda-backend-trusted-profile-analyzer.<domain>"
+  "redHatDependencyAnalytics.backendUrl": "https://rhda-backend-trusted-profile-analyzer.<domain>"
 }
 ```
 
