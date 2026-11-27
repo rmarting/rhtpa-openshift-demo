@@ -75,10 +75,11 @@ spec:
         - "^(.+)[.-]rhlw-[0-9]+$"
       resources:
         requests:
-          cpu: 500m
-          memory: 2Gi
-        limits:
+          cpu: 2
           memory: 4Gi
+        limits:
+          cpu: 4
+          memory: 8Gi
       rust:
         logFilter: info
     importer:
@@ -87,14 +88,18 @@ spec:
       concurrency: 1
       resources:
         requests:
-          cpu: 500m
-          memory: 2Gi
-        limits:
+          cpu: 2
           memory: 4Gi
+        limits:
+          cpu: 4
+          memory: 8Gi
       workingDirectory:
         size: 10Gi
       credentialPaths:
         - /run/secrets/rhtpa-rhlw-creds
+      rust:
+        backtrace: true
+        logFilter: info
     createImporters:
       enabled: true
       importers:
@@ -164,6 +169,23 @@ spec:
             disabled: true
             period: 1d
             source: https://packages.redhat.com/lightwell/osv/java/remediated/
+            discovery:
+              type: pulp
+            auth:
+              method:
+                type: basic
+                username:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_USERNAME
+                password:
+                  type: file
+                  value: /run/secrets/rhtpa-rhlw-creds/RH_LW_PASSWORD
+        redhat-lightwell-vex-java-remediated:
+          http:
+            description: Red Hat Lightwell Security Data on VEX Java Remediated repository
+            disabled: true
+            period: 1d
+            source: https://packages.redhat.com/api/pulp-content/lightwell/vex/java/remediated/
             discovery:
               type: pulp
             auth:
